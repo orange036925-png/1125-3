@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奇蹟冬夜 · 互動式動態聖誕賀卡</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: 繁體中文襯線體、黑體與手寫風英文字體 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 主題變數定義 */
+        :root {
+            --bg-gradient-start: #091526;
+            --bg-gradient-end: #1b365d;
+            --card-cover-bg: linear-gradient(135deg, #8b1e24 0%, #5c1015 100%);
+            --card-cover-border: #d4af37;
+            --card-inner-bg: #fffdf7;
+            --card-text-primary: #2c1e16;
+            --card-text-accent: #9e2a2b;
+            --accent-gold: #f3c65f;
+            --tree-color-1: #1b4332;
+            --tree-color-2: #2d6a4f;
+            --tree-color-3: #40916c;
+        }
+
+        /* 主題 2: 極光藍銀 */
+        body.theme-aurora {
+            --bg-gradient-start: #040d1a;
+            --bg-gradient-end: #0f2c4c;
+            --card-cover-bg: linear-gradient(135deg, #10375c 0%, #091d36 100%);
+            --card-cover-border: #a8dadc;
+            --card-inner-bg: #f4f9fc;
+            --card-text-primary: #1d3557;
+            --card-text-accent: #2a6f97;
+            --accent-gold: #a8dadc;
+            --tree-color-1: #1d4e89;
+            --tree-color-2: #0077b6;
+            --tree-color-3: #48cae4;
+        }
+
+        /* 主題 3: 暖金冬夜 */
+        body.theme-gold {
+            --bg-gradient-start: #120d08;
+            --bg-gradient-end: #2c2015;
+            --card-cover-bg: linear-gradient(135deg, #2b2118 0%, #17110c 100%);
+            --card-cover-border: #e5b869;
+            --card-inner-bg: #fcf8f0;
+            --card-text-primary: #2b2118;
+            --card-text-accent: #b07d2b;
+            --accent-gold: #e5b869;
+            --tree-color-1: #3d311e;
+            --tree-color-2: #6b532e;
+            --tree-color-3: #9c7a44;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at 50% 20%, var(--bg-gradient-end), var(--bg-gradient-start));
+            font-family: 'Noto Sans TC', sans-serif;
+            color: #ffffff;
+            overflow-x: hidden;
+            transition: background 0.8s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .font-serif-tc {
+            font-family: 'Noto Serif TC', serif;
+        }
+
+        .font-script {
+            font-family: 'Great Vibes', cursive;
+        }
+
+        /* 全螢幕背景 Canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: auto;
+        }
+
+        /* 聖誕老人雪橇飛行動畫 */
+        .santa-sleigh-container {
+            position: fixed;
+            top: 8%;
+            left: -300px;
+            z-index: 2;
+            pointer-events: none;
+            animation: flySanta 28s linear infinite;
+            opacity: 0.85;
+            filter: drop-shadow(0 0 8px rgba(255, 235, 175, 0.6));
+        }
+
+        @keyframes flySanta {
+            0% {
+                transform: translateX(0) translateY(0) scale(0.75);
+            }
+            25% {
+                transform: translateX(35vw) translateY(-25px) scale(0.85);
+            }
+            50% {
+                transform: translateX(70vw) translateY(10px) scale(0.8);
+            }
+            75% {
+                transform: translateX(105vw) translateY(-20px) scale(0.75);
+            }
+            100% {
+                transform: translateX(calc(100vw + 350px)) translateY(0) scale(0.7);
+            }
+        }
+
+        /* 玻璃擬態控制按鈕 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+        }
+
+        /* 3D 賀卡容器與透視 */
+        .scene-container {
+            position: relative;
+            z-index: 10;
+            perspective: 1800px;
+            width: 100%;
+            max-width: 920px;
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 75vh;
+        }
+
+        .card-wrapper {
+            position: relative;
+            width: 340px;
+            height: 490px;
+            transition: transform 1.1s cubic-bezier(0.25, 1, 0.5, 1);
+            transform-style: preserve-3d;
+        }
+
+        /* 電腦版打開賀卡時向右平移，讓展開的兩頁居中 */
+        @media (min-width: 768px) {
+            .card-wrapper {
+                width: 400px;
+                height: 550px;
+            }
+            .card-wrapper.is-open {
+                transform: translateX(200px);
+            }
+        }
+
+        /* 手機版打開賀卡微調 */
+        @media (max-width: 767px) {
+            .card-wrapper {
+                width: 320px;
+                height: 470px;
+            }
+            .card-wrapper.is-open {
+                transform: translateX(12px) scale(0.95);
+            }
+        }
+
+        /* 賀卡右半部（底頁 / 祝福內文） */
+        .card-inside-right {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--card-inner-bg);
+            color: var(--card-text-primary);
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(212, 175, 55, 0.15);
+            border: 2px solid var(--card-cover-border);
+            padding: 28px 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 1;
+            overflow-y: auto;
+        }
+
+        /* 賀卡左半部（可 3D 翻轉的封面與內頁左側） */
+        .card-front-flap {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: left center;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+            z-index: 2;
+            cursor: pointer;
+        }
+
+        .card-wrapper.is-open .card-front-flap {
+            transform: rotateY(-172deg);
+        }
+
+        /* 手機版翻轉角度略大以免遮擋右側文字 */
+        @media (max-width: 767px) {
+            .card-wrapper.is-open .card-front-flap {
+                transform: rotateY(-180deg);
+            }
+        }
+
+        /* 封面正面與內頁左側（背面） */
+        .flap-face {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        /* 封面正面設計 */
+        .flap-front {
+            background: var(--card-cover-bg);
+            border: 3px solid var(--card-cover-border);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 0 40px rgba(0, 0, 0, 0.35);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 28px 20px;
+            text-align: center;
+        }
+
+        /* 內頁左側（翻開後看到的左頁：立體聖誕樹與禮物互動區） */
+        .flap-back {
+            background: linear-gradient(180deg, #10253e 0%, #1c3d5a 75%, #e8f1f5 75%, #ffffff 100%);
+            border: 2px solid var(--card-cover-border);
+            transform: rotateY(180deg);
+            box-shadow: inset -10px 0 25px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        /* 金色燙金邊框裝飾 */
+        .gold-inner-frame {
+            position: absolute;
+            inset: 10px;
+            border: 1px solid var(--card-cover-border);
+            border-radius: 10px;
+            pointer-events: none;
+            opacity: 0.75;
+        }
+
+        /* 聖誕樹燈飾閃爍動畫 */
+        @keyframes twinkleLight {
+            0%, 100% { opacity: 1; transform: scale(1.15); filter: brightness(1.3); }
+            50% { opacity: 0.35; transform: scale(0.85); filter: brightness(0.8); }
+        }
+
+        .tree-light {
+            animation: twinkleLight 1.8s infinite ease-in-out;
+            transform-origin: center;
+        }
+        .tree-light:nth-child(2n) { animation-delay: 0.4s; }
+        .tree-light:nth-child(3n) { animation-delay: 0.9s; }
+        .tree-light:nth-child(4n) { animation-delay: 1.3s; }
+
+        /* 樹頂星星光芒 */
+        @keyframes starPulse {
+            0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 8px #ffd166); }
+            50% { transform: scale(1.15) rotate(8deg); filter: drop-shadow(0 0 16px #ffea00); }
+        }
+        .tree-star {
+            animation: starPulse 2.5s infinite ease-in-out;
+            transform-origin: 100px 32px;
+        }
+
+        /* 禮物盒互動動畫 */
+        .gift-box {
+            cursor: pointer;
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .gift-box:hover {
+            transform: translateY(-5px) scale(1.08);
+        }
+        .gift-box:active {
+            transform: scale(0.92);
+        }
+
+        /* 禮物驚喜氣泡 */
+        .surprise-toast {
+            animation: popUp 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        @keyframes popUp {
+            0% { opacity: 0; transform: translateY(15px) scale(0.8); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* 自訂捲軸 */
+        .card-inside-right::-webkit-scrollbar {
+            width: 5px;
+        }
+        .card-inside-right::-webkit-scrollbar-thumb {
+            background: rgba(180, 140, 80, 0.4);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="theme-classic">
+
+    <!-- 冬夜星空與飄雪互動 Canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- 飛過夜空的聖誕老人與馴鹿雪橇 SVG -->
+    <div class="santa-sleigh-container" aria-hidden="true">
+        <svg width="240" height="75" viewBox="0 0 240 75" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- 魔法星塵尾跡 -->
+            <path d="M5 55 Q 35 45, 65 55" stroke="#fde68a" stroke-width="2" stroke-dasharray="3 4" opacity="0.7"/>
+            <circle cx="15" cy="48" r="1.5" fill="#fef08a"/>
+            <circle cx="30" cy="58" r="2" fill="#fef08a"/>
+            <circle cx="45" cy="45" r="1.5" fill="#ffffff"/>
+            <!-- 雪橇 -->
+            <path d="M55 58 C 75 58, 95 58, 108 46" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+            <path d="M62 58 L 65 50 M 92 58 L 94 50" stroke="#f59e0b" stroke-width="2.5"/>
+            <path d="M58 40 L 100 40 L 95 52 L 62 52 Z" fill="#dc2626"/>
+            <!-- 禮物袋 -->
+            <circle cx="68" cy="36" r="8" fill="#92400e"/>
+            <!-- 聖誕老人 -->
+            <circle cx="84" cy="34" r="6" fill="#dc2626"/>
+            <circle cx="85" cy="26" r="4.5" fill="#fde68a"/>
+            <path d="M81 24 L 89 24 L 84 16 Z" fill="#dc2626"/>
+            <circle cx="83" cy="16" r="1.5" fill="#ffffff"/>
+            <!-- 韁繩 -->
+            <path d="M90 34 Q 130 42, 195 36" stroke="#fde68a" stroke-width="1" opacity="0.8"/>
+            <!-- 馴鹿 1 -->
+            <g transform="translate(135, 28)">
+                <ellipse cx="14" cy="14" rx="10" ry="5" fill="#b45309"/>
+                <circle cx="24" cy="8" r="4" fill="#b45309"/>
+                <path d="M23 4 L 21 -2 M 25 4 L 28 -2" stroke="#fde68a" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M7 18 L 4 26 M 11 18 L 10 26 M 18 18 L 21 26 M 21 18 L 25 25" stroke="#92400e" stroke-width="2" stroke-linecap="round"/>
+            </g>
+            <!-- 馴鹿 2 (紅鼻子魯道夫) -->
+            <g transform="translate(182, 24)">
+                <ellipse cx="14" cy="14" rx="10" ry="5" fill="#d97706"/>
+                <circle cx="24" cy="8" r="4" fill="#d97706"/>
+                <circle cx="28.5" cy="8" r="1.8" fill="#ef4444"/>
+                <path d="M23 4 L 21 -2 M 25 4 L 28 -2" stroke="#fde68a" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M7 18 L 4 26 M 11 18 L 10 26 M 18 18 L 21 26 M 21 18 L 25 25" stroke="#92400e" stroke-width="2" stroke-linecap="round"/>
+            </g>
+        </svg>
+    </div>
+
+    <!-- 頂部玻璃擬態工具列 -->
+    <header class="fixed top-4 left-0 right-0 z-30 px-4 flex justify-between items-center max-w-5xl mx-auto pointer-events-none">
+        <!-- 音樂盒控制鈕 -->
+        <button id="music-toggle-btn" class="pointer-events-auto glass-panel px-4 py-2.5 rounded-full flex items-center gap-2 text-sm font-medium hover:bg-white/20 transition active:scale-95" title="播放/暫停聖誕音樂盒">
+            <span id="music-icon" class="text-lg">🎵</span>
+            <span id="music-label" class="hidden sm:inline">音樂盒：關閉</span>
+        </button>
+
+        <!-- 右側功能按鈕群 -->
+        <div class="pointer-events-auto flex items-center gap-2 sm:gap-3">
+            <!-- 雪量調整 -->
+            <button id="snow-toggle-btn" class="glass-panel px-3.5 py-2.5 rounded-full flex items-center gap-1.5 text-sm font-medium hover:bg-white/20 transition active:scale-95" title="切換飄雪強度">
+                <span>❄️</span>
+                <span id="snow-label" class="hidden sm:inline">雪量：適中</span>
+            </button>
+
+            <!-- 客製化編輯鈕 -->
+            <button id="edit-modal-btn" class="glass-panel px-4 py-2.5 rounded-full flex items-center gap-1.5 text-sm font-medium hover:bg-white/20 transition active:scale-95 text-amber-200 border-amber-300/40">
+                <span>✍️</span>
+                <span>編輯賀卡</span>
+            </button>
+
+            <!-- 分享連結鈕 -->
+            <button id="share-btn" class="glass-panel px-4 py-2.5 rounded-full flex items-center gap-1.5 text-sm font-medium bg-amber-500/30 hover:bg-amber-500/50 border-amber-300/50 transition active:scale-95">
+                <span>🔗</span>
+                <span class="hidden sm:inline">複製分享連結</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 互動提示小標籤 -->
+    <div class="fixed bottom-4 left-0 right-0 z-20 text-center pointer-events-none px-4">
+        <p class="inline-block glass-panel px-4 py-1.5 rounded-full text-xs sm:text-sm text-amber-100/90 tracking-wide">
+            ✨ 點擊夜空任意處可施放聖誕星光煙火 · 點擊賀卡開啟祝福
+        </p>
+    </div>
+
+    <!-- 中央 3D 聖誕賀卡主舞台 -->
+    <main class="scene-container">
+        <div id="card-wrapper" class="card-wrapper">
+            
+            <!-- 賀卡右側底頁（打開後顯示的祝福語內頁） -->
+            <div class="card-inside-right">
+                <div class="gold-inner-frame"></div>
+                
+                <!-- 頂部裝飾與收件人 -->
+                <div class="relative z-10">
+                    <div class="flex justify-between items-center border-b border-amber-700/20 pb-2 mb-4">
+                        <span class="font-script text-2xl" style="color: var(--card-text-accent);">Season's Greetings</span>
+                        <button id="close-card-btn" class="text-xs px-2.5 py-1 rounded-full bg-amber-900/10 hover:bg-amber-900/20 transition" style="color: var(--card-text-primary);">
+                            闔上賀卡 ✕
+                        </button>
+                    </div>
+                    
+                    <h2 class="font-serif-tc text-lg sm:text-xl font-bold mb-3" style="color: var(--card-text-accent);">
+                        親愛的 <span id="display-recipient" class="underline decoration-amber-400/60 underline-offset-4">摯友</span>：
+                    </h2>
+                </div>
+
+                <!-- 祝福語內文 -->
+                <div class="relative z-10 flex-1 flex items-center my-2">
+                    <p id="display-message" class="font-serif-tc text-base sm:text-[17px] leading-relaxed whitespace-pre-line tracking-wide" style="color: var(--card-text-primary);">
+                        在這個雪花紛飛的浪漫冬夜，願溫暖的燭光與悠揚的鈴聲，為你帶來一整年的平安、喜樂與奇蹟。願你所有的心願都能在聖誕樹下悄悄實現！
+                    </p>
+                </div>
+
+                <!-- 底部署名與日期 -->
+                <div class="relative z-10 pt-3 border-t border-amber-700/20 flex flex-col items-end">
+                    <p class="text-xs opacity-70 mb-1">獻上最誠摯的聖誕祝福</p>
+                    <p class="font-serif-tc text-lg font-bold" style="color: var(--card-text-accent);">
+                        <span id="display-sender">聖誕小精靈</span> 敬上
+                    </p>
+                    <p class="font-script text-xl opacity-80 mt-0.5" style="color: var(--card-text-primary);">Merry Christmas 2026</p>
+                </div>
+            </div>
+
+            <!-- 賀卡左側翻頁（正面為封面，背面為立體聖誕樹互動場景） -->
+            <div id="card-front-flap" class="card-front-flap">
+                
+                <!-- 【封面正面】 -->
+                <div class="flap-face flap-front">
+                    <div class="gold-inner-frame"></div>
+                    
+                    <!-- 頂部星星徽章 -->
+                    <div class="mt-2 flex flex-col items-center">
+                        <span class="text-xs tracking-[0.3em] uppercase text-amber-200/80 mb-1">Winter Wonderland</span>
+                        <div class="w-12 h-0.5 bg-gradient-to-r from-transparent via-amber-300 to-transparent"></div>
+                    </div>
+
+                    <!-- 封面中央精緻燙金聖誕花圈與馴鹿插畫 -->
+                    <div class="my-auto flex flex-col items-center">
+                        <div class="relative w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center">
+                            <svg viewBox="0 0 200 200" class="w-full h-full drop-shadow-lg">
+                                <!-- 外圈光暈 -->
+                                <circle cx="100" cy="100" r="82" fill="none" stroke="var(--accent-gold)" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.7"/>
+                                <circle cx="100" cy="100" r="74" fill="none" stroke="var(--accent-gold)" stroke-width="2.5"/>
+                                <!-- 冬青葉裝飾 -->
+                                <path d="M100 20 C110 12, 120 22, 108 30 C120 35, 110 45, 100 35 C90 45, 80 35, 92 30 C80 22, 90 12, 100 20 Z" fill="#2d6a4f" stroke="var(--accent-gold)" stroke-width="1"/>
+                                <circle cx="100" cy="29" r="3.5" fill="#e63946"/>
+                                <circle cx="95" cy="32" r="2.5" fill="#e63946"/>
+                                <circle cx="105" cy="32" r="2.5" fill="#e63946"/>
+                                <!-- 中央剪影聖誕樹 -->
+                                <polygon points="100,48 68,95 85,95 58,132 142,132 115,95 132,95" fill="var(--accent-gold)" opacity="0.92"/>
+                                <rect x="93" y="132" width="14" height="18" fill="var(--accent-gold)" opacity="0.8"/>
+                                <!-- 樹頂星 -->
+                                <polygon points="100,36 103,44 111,44 105,49 107,57 100,52 93,57 95,49 89,44 97,44" fill="#ffffff"/>
+                                <!-- 雪花點綴 -->
+                                <circle cx="65" cy="68" r="2" fill="#ffffff" opacity="0.8"/>
+                                <circle cx="138" cy="74" r="2.5" fill="#ffffff" opacity="0.9"/>
+                                <circle cx="52" cy="110" r="1.8" fill="#ffffff" opacity="0.7"/>
+                                <circle cx="148" cy="112" r="2" fill="#ffffff" opacity="0.8"/>
+                            </svg>
+                        </div>
+
+                        <h1 class="font-script text-4xl sm:text-5xl text-amber-200 mt-2 drop-shadow">Merry Christmas</h1>
+                        <p class="font-serif-tc text-lg sm:text-xl tracking-[0.25em] text-amber-100/95 mt-1 font-bold">聖誕快樂 · 歲歲平安</p>
+                    </div>
+
+                    <!-- 打開賀卡按鈕 -->
+                    <div class="mb-2">
+                        <button id="open-card-btn" class="px-6 py-2.5 rounded-full font-serif-tc font-bold text-sm tracking-widest transition transform hover:scale-105 active:scale-95 shadow-lg flex items-center gap-2" style="background: var(--accent-gold); color: #1a120b;">
+                            <span>✨ 打開賀卡 ✨</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 【內頁左側：立體動態聖誕樹與禮物驚喜區】 -->
+                <div class="flap-face flap-back">
+                    <div class="w-full text-center">
+                        <p class="font-script text-2xl text-amber-200 drop-shadow">Magical Christmas Tree</p>
+                        <p class="text-[11px] text-sky-100/80">點擊下方禮物盒或聖誕樹探索驚喜</p>
+                    </div>
+
+                    <!-- 動態閃爍聖誕樹與互動禮物盒 SVG -->
+                    <div class="relative w-full flex-1 flex items-center justify-center my-1">
+                        <svg id="interactive-tree-svg" viewBox="0 0 200 240" class="w-full max-w-[240px] h-auto overflow-visible">
+                            <!-- 樹幹 -->
+                            <rect x="88" y="185" width="24" height="30" rx="3" fill="#5c3a21"/>
+                            
+                            <!-- 聖誕樹三層樹冠 -->
+                            <polygon points="100,95 32,188 168,188" fill="var(--tree-color-1)"/>
+                            <polygon points="100,62 45,142 155,142" fill="var(--tree-color-2)"/>
+                            <polygon points="100,32 60,96 140,96" fill="var(--tree-color-3)"/>
+
+                            <!-- 金色絲帶裝飾 -->
+                            <path d="M76 76 Q 100 90, 124 76" fill="none" stroke="#ffd166" stroke-width="2.5" stroke-linecap="round"/>
+                            <path d="M58 122 Q 100 142, 142 122" fill="none" stroke="#ffd166" stroke-width="3" stroke-linecap="round"/>
+                            <path d="M44 168 Q 100 190, 156 168" fill="none" stroke="#ffd166" stroke-width="3.5" stroke-linecap="round"/>
+
+                            <!-- 閃爍聖誕燈泡 -->
+                            <circle class="tree-light" cx="100" cy="60" r="4" fill="#ff595e"/>
+                            <circle class="tree-light" cx="82" cy="82" r="4.5" fill="#ffca3a"/>
+                            <circle class="tree-light" cx="118" cy="80" r="4" fill="#8ac926"/>
+                            <circle class="tree-light" cx="72" cy="112" r="4.5" fill="#1982c4"/>
+                            <circle class="tree-light" cx="102" cy="108" r="5" fill="#ff595e"/>
+                            <circle class="tree-light" cx="130" cy="115" r="4" fill="#ffca3a"/>
+                            <circle class="tree-light" cx="60" cy="152" r="5" fill="#ffca3a"/>
+                            <circle class="tree-light" cx="88" cy="146" r="4.5" fill="#8ac926"/>
+                            <circle class="tree-light" cx="115" cy="155" r="5" fill="#ff595e"/>
+                            <circle class="tree-light" cx="142" cy="150" r="4.5" fill="#1982c4"/>
+                            <circle class="tree-light" cx="50" cy="178" r="4.5" fill="#ff595e"/>
+                            <circle class="tree-light" cx="100" cy="176" r="5" fill="#ffca3a"/>
+                            <circle class="tree-light" cx="150" cy="178" r="4.5" fill="#8ac926"/>
+
+                            <!-- 樹頂發光星星 -->
+                            <polygon class="tree-star" points="100,14 105,26 118,26 108,34 112,46 100,38 88,46 92,34 82,26 95,26" fill="#ffd166"/>
+
+                            <!-- 互動禮物盒 1 (紅金禮物) -->
+                            <g class="gift-box" data-gift="0" transform="translate(36, 186)">
+                                <rect x="0" y="6" width="32" height="26" rx="3" fill="#e63946"/>
+                                <rect x="-2" y="2" width="36" height="6" rx="2" fill="#d62828"/>
+                                <rect x="13" y="2" width="6" height="30" fill="#ffd166"/>
+                                <path d="M16 2 C10 -4, 4 2, 16 2 C28 2, 22 -4, 16 2" stroke="#ffd166" stroke-width="2.5" fill="none"/>
+                            </g>
+
+                            <!-- 互動禮物盒 2 (藍銀禮物) -->
+                            <g class="gift-box" data-gift="1" transform="translate(132, 188)">
+                                <rect x="0" y="5" width="30" height="24" rx="3" fill="#1d3557"/>
+                                <rect x="-2" y="1" width="34" height="6" rx="2" fill="#457b9d"/>
+                                <rect x="12" y="1" width="6" height="28" fill="#a8dadc"/>
+                                <path d="M15 1 C9 -5, 3 1, 15 1 C27 1, 21 -5, 15 1" stroke="#a8dadc" stroke-width="2.5" fill="none"/>
+                            </g>
+
+                            <!-- 互動禮物盒 3 (綠金小禮物) -->
+                            <g class="gift-box" data-gift="2" transform="translate(106, 196)">
+                                <rect x="0" y="4" width="22" height="18" rx="2" fill="#2a9d8f"/>
+                                <rect x="9" y="4" width="4" height="18" fill="#e9c46a"/>
+                            </g>
+                        </svg>
+                    </div>
+
+                    <!-- 禮物驚喜顯示框 -->
+                    <div id="gift-surprise-box" class="w-full min-h-[44px] bg-slate-800/85 text-amber-100 rounded-xl px-3 py-2 text-center text-xs flex items-center justify-center shadow-inner">
+                        🎁 點擊聖誕樹下的禮物盒拆開聖誕小驚喜！
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 客製化編輯視窗 (Modal) -->
+    <div id="edit-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/65 backdrop-blur-sm p-4">
+        <div class="glass-panel bg-slate-900/90 border border-amber-300/30 rounded-2xl w-full max-w-md p-6 text-white shadow-2xl transform transition-all">
+            <div class="flex justify-between items-center border-b border-white/15 pb-3 mb-4">
+                <h3 class="font-serif-tc text-xl font-bold text-amber-200 flex items-center gap-2">
+                    <span>🎄</span> 客製化專屬聖誕賀卡
+                </h3>
+                <button id="close-modal-btn" class="text-white/70 hover:text-white text-xl leading-none">&times;</button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- 主題配色選擇 -->
+                <div>
+                    <label class="block text-xs text-amber-100/80 mb-1.5">選擇冬夜主題配色</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" data-theme="theme-classic" class="theme-option active py-2 px-2 rounded-xl border border-amber-400 bg-red-950/80 text-xs font-medium flex flex-col items-center gap-1 transition">
+                            <span class="w-4 h-4 rounded-full bg-gradient-to-br from-red-600 to-emerald-700 border border-amber-300"></span>
+                            經典紅綠
+                        </button>
+                        <button type="button" data-theme="theme-aurora" class="theme-option py-2 px-2 rounded-xl border border-white/20 bg-sky-950/80 text-xs font-medium flex flex-col items-center gap-1 transition">
+                            <span class="w-4 h-4 rounded-full bg-gradient-to-br from-sky-500 to-slate-200 border border-sky-200"></span>
+                            極光藍銀
+                        </button>
+                        <button type="button" data-theme="theme-gold" class="theme-option py-2 px-2 rounded-xl border border-white/20 bg-amber-950/80 text-xs font-medium flex flex-col items-center gap-1 transition">
+                            <span class="w-4 h-4 rounded-full bg-gradient-to-br from-amber-400 to-stone-800 border border-amber-200"></span>
+                            暖金冬夜
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 收件人姓名 -->
+                <div>
+                    <label for="input-recipient" class="block text-xs text-amber-100/80 mb-1">收件人姓名</label>
+                    <input type="text" id="input-recipient" maxlength="20" placeholder="例如：親愛的小美、團隊夥伴" class="w-full px-3.5 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-amber-300 text-sm">
+                </div>
+
+                <!-- 祝福語範本一鍵套用 -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label for="input-message" class="text-xs text-amber-100/80">祝福語內容</label>
+                        <div class="flex gap-1.5">
+                            <button type="button" data-template="warm" class="template-btn text-[11px] px-2 py-0.5 rounded bg-amber-500/25 hover:bg-amber-500/40 text-amber-200 transition">溫馨</button>
+                            <button type="button" data-template="humor" class="template-btn text-[11px] px-2 py-0.5 rounded bg-emerald-500/25 hover:bg-emerald-500/40 text-emerald-200 transition">幽默</button>
+                            <button type="button" data-template="bless" class="template-btn text-[11px] px-2 py-0.5 rounded bg-sky-500/25 hover:bg-sky-500/40 text-sky-200 transition">摯友</button>
+                        </div>
+                    </div>
+                    <textarea id="input-message" rows="4" maxlength="220" placeholder="寫下你的聖誕祝福..." class="w-full px-3.5 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-amber-300 text-sm leading-relaxed"></textarea>
+                </div>
+
+                <!-- 寄件人署名 -->
+                <div>
+                    <label for="input-sender" class="block text-xs text-amber-100/80 mb-1">寄件人署名</label>
+                    <input type="text" id="input-sender" maxlength="20" placeholder="你的名字" class="w-full px-3.5 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-amber-300 text-sm">
+                </div>
+            </div>
+
+            <!-- 操作按鈕 -->
+            <div class="mt-6 flex gap-3">
+                <button id="save-card-btn" class="flex-1 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 hover:brightness-110 transition shadow-lg">
+                    套用並預覽賀卡
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全域提示訊息 Toast -->
+    <div id="global-toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 hidden glass-panel bg-slate-900/90 text-amber-200 px-5 py-2.5 rounded-full text-sm font-medium shadow-xl border border-amber-300/40">
+        已複製專屬賀卡分享連結！
+    </div>
+
+    <script>
+        /**
+         * ==========================================
+         * 1. 狀態管理與預設範本資料
+         * ==========================================
+         */
+        const TEMPLATES = {
+            warm: "在這個雪花紛飛的浪漫冬夜，願溫暖的燭光與悠揚的鈴聲，為你帶來一整年的平安、喜樂與奇蹟。願你所有的心願都能在聖誕樹下悄悄實現！",
+            humor: "聖誕老人說今年你表現超棒，但因為煙囪太窄禮物卡住了，所以我只好先送你這張充滿誠意的電子賀卡！祝你聖誕快樂，吃大餐完全不會胖！",
+            bless: "感謝這一年有你的陪伴與支持，讓平凡的日子也閃閃發光。願新的一年我們繼續一起冒險、一起大笑，聖誕快樂，我的好朋友！"
+        };
+
+        const GIFT_SURPRISES = [
+            "🎊 拆開紅金禮物盒：獲得「一整年的好運與幸福魔法」！",
+            "⭐ 拆開藍銀禮物盒：聖誕老人送你一顆「心想事成許願星」！",
+            "🍪 拆開綠金小禮物：獲得「熱可可與薑餅人的溫暖擁抱」！"
+        ];
+
+        const cardState = {
+            recipient: "摯友",
+            message: TEMPLATES.warm,
+            sender: "聖誕小精靈",
+            theme: "theme-classic"
+        };
+
+        /**
+         * ==========================================
+         * 2. Web Audio API 聖誕音樂盒合成器
+         *    播放《We Wish You a Merry Christmas》
+         * ==========================================
+         */
+        class ChristmasMusicBox {
+            constructor() {
+                this.ctx = null;
+                this.isPlaying = false;
+                this.timer = null;
+                this.noteIndex = 0;
+
+                // 音符頻率表 (Hz)
+                const N = {
+                    C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, Fs4: 369.99,
+                    G4: 392.00, A4: 440.00, B4: 493.88,
+                    C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99
+                };
+
+                // 《We Wish You a Merry Christmas》旋律與拍長 (單位: 毫秒)
+                const beat = 340;
+                this.melody = [
+                    [N.D4, beat],
+                    [N.G4, beat], [N.G4, beat / 2], [N.A4, beat / 2], [N.G4, beat / 2], [N.Fs4, beat / 2],
+                    [N.E4, beat], [N.E4, beat], [N.E4, beat],
+                    [N.A4, beat], [N.A4, beat / 2], [N.B4, beat / 2], [N.A4, beat / 2], [N.G4, beat / 2],
+                    [N.Fs4, beat], [N.D4, beat], [N.D4, beat],
+                    [N.B4, beat], [N.B4, beat / 2], [N.C5, beat / 2], [N.B4, beat / 2], [N.A4, beat / 2],
+                    [N.G4, beat], [N.E4, beat], [N.D4, beat / 2], [N.D4, beat / 2],
+                    [N.E4, beat], [N.A4, beat], [N.Fs4, beat],
+                    [N.G4, beat * 2.2]
+                ];
+            }
+
+            initContext() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            // 合成清脆音樂盒音色 (正弦波 + 泛音鐘聲包絡)
+            playTone(freq, durationMs) {
+                if (!this.ctx || !this.isPlaying) return;
+                const now = this.ctx.currentTime;
+                const durationSec = durationMs / 1000;
+
+                // 主音 Oscillator
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+
+                // 高八度泛音增加音樂盒金屬清脆感
+                const overtone = this.ctx.createOscillator();
+                const overtoneGain = this.ctx.createGain();
+                overtone.type = 'triangle';
+                overtone.frequency.setValueAtTime(freq * 2, now);
+
+                // 音量包絡 (快速起音、柔和衰減)
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.exponentialRampToValueAtTime(0.16, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0008, now + durationSec * 1.4);
+
+                overtoneGain.gain.setValueAtTime(0.001, now);
+                overtoneGain.gain.exponentialRampToValueAtTime(0.04, now + 0.015);
+                overtoneGain.gain.exponentialRampToValueAtTime(0.0005, now + durationSec * 0.6);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                overtone.connect(overtoneGain);
+                overtoneGain.connect(this.ctx.destination);
+
+                osc.start(now);
+                overtone.start(now);
+                osc.stop(now + durationSec * 1.5);
+                overtone.stop(now + durationSec * 0.7);
+            }
+
+            // 播放清脆鈴聲音效 (開啟賀卡或拆禮物時使用)
+            playChime() {
+                try {
+                    this.initContext();
+                    const wasPlaying = this.isPlaying;
+                    this.isPlaying = true;
+                    this.playTone(523.25, 250);
+                    setTimeout(() => this.playTone(659.25, 250), 90);
+                    setTimeout(() => this.playTone(783.99, 350), 180);
+                    setTimeout(() => this.playTone(1046.50, 500), 270);
+                    setTimeout(() => { this.isPlaying = wasPlaying; }, 300);
+                } catch (e) {
+                    // 忽略瀏覽器未互動前的音訊限制
+                }
+            }
+
+            scheduleNext() {
+                if (!this.isPlaying) return;
+                const [freq, duration] = this.melody[this.noteIndex];
+                this.playTone(freq, duration);
+                this.noteIndex = (this.noteIndex + 1) % this.melody.length;
+                this.timer = setTimeout(() => this.scheduleNext(), duration);
+            }
+
+            toggle() {
+                if (this.isPlaying) {
+                    this.stop();
+                } else {
+                    this.start();
+                }
+                return this.isPlaying;
+            }
+
+            start() {
+                this.initContext();
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+                this.scheduleNext();
+            }
+
+            stop() {
+                this.isPlaying = false;
+                if (this.timer) {
+                    clearTimeout(this.timer);
+                    this.timer = null;
+                }
+            }
+        }
+
+        const musicBox = new ChristmasMusicBox();
+
+        /**
+         * ==========================================
+         * 3. HTML5 Canvas 星空、飄雪與點擊煙火特效
+         * ==========================================
+         */
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        const snowLevels = [
+            { label: '雪量：微雪', count: 55 },
+            { label: '雪量：適中', count: 130 },
+            { label: '雪量：暴風雪', count: 260 }
+        ];
+        let currentSnowLevelIdx = 1;
+
+        let stars = [];
+        let snowflakes = [];
+        let sparkles = [];
+
+        function initSkyAndSnow() {
+            // 初始化背景閃爍星星
+            stars = [];
+            const starCount = Math.floor((width * height) / 12000);
+            for (let i = 0; i < starCount; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height * 0.75,
+                    radius: Math.random() * 1.6 + 0.4,
+                    alpha: Math.random(),
+                    speed: Math.random() * 0.02 + 0.005
+                });
+            }
+
+            // 初始化雪花
+            adjustSnowCount(snowLevels[currentSnowLevelIdx].count);
+        }
+
+        function adjustSnowCount(targetCount) {
+            while (snowflakes.length < targetCount) {
+                snowflakes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    radius: Math.random() * 3.2 + 1,
+                    speedY: Math.random() * 1.4 + 0.5,
+                    speedX: (Math.random() - 0.5) * 0.6,
+                    swing: Math.random() * Math.PI * 2,
+                    opacity: Math.random() * 0.65 + 0.3
+                });
+            }
+            if (snowflakes.length > targetCount) {
+                snowflakes.length = targetCount;
+            }
+        }
+
+        // 點擊夜空產生星光煙火粒子
+        function createSparkleBurst(x, y) {
+            const colors = ['#ffd166', '#ffffff', '#ff758f', '#72efdd', '#fde68a'];
+            const particleCount = 28;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.3;
+                const velocity = Math.random() * 4.5 + 1.5;
+                sparkles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * velocity,
+                    vy: Math.sin(angle) * velocity,
+                    alpha: 1,
+                    decay: Math.random() * 0.02 + 0.015,
+                    size: Math.random() * 3 + 1.5,
+                    color: colors[Math.floor(Math.random() * colors.length)]
+                });
+            }
+        }
+
+        function animateCanvas() {
+            ctx.clearRect(0, 0, width, height);
+
+            // 繪製閃爍星空
+            for (let s of stars) {
+                s.alpha += s.speed;
+                if (s.alpha > 1 || s.alpha < 0.15) s.speed = -s.speed;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 250, 230, ${s.alpha})`;
+                ctx.fill();
+            }
+
+            // 繪製飄雪
+            for (let f of snowflakes) {
+                f.swing += 0.02;
+                f.y += f.speedY;
+                f.x += f.speedX + Math.sin(f.swing) * 0.4;
+
+                if (f.y > height + 5) {
+                    f.y = -5;
+                    f.x = Math.random() * width;
+                }
+                if (f.x > width + 5) f.x = -5;
+                if (f.x < -5) f.x = width + 5;
+
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${f.opacity})`;
+                ctx.fill();
+            }
+
+            // 繪製星光煙火粒子
+            for (let i = sparkles.length - 1; i >= 0; i--) {
+                const p = sparkles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.05; // 微微重力
+                p.alpha -= p.decay;
+
+                if (p.alpha <= 0) {
+                    sparkles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            requestAnimationFrame(animateCanvas);
+        }
+
+        // 監聽視窗縮放
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initSkyAndSnow();
+        });
+
+        // 點擊畫布施放星光煙火
+        canvas.addEventListener('pointerdown', (e) => {
+            createSparkleBurst(e.clientX, e.clientY);
+        });
+
+        /**
+         * ==========================================
+         * 4. 賀卡狀態渲染、網址參數編解碼與互動邏輯
+         * ==========================================
+         */
+        function applyCardStateToUI() {
+            document.getElementById('display-recipient').textContent = cardState.recipient || '摯友';
+            document.getElementById('display-message').textContent = cardState.message || TEMPLATES.warm;
+            document.getElementById('display-sender').textContent = cardState.sender || '聖誕小精靈';
+
+            // 套用主題 class
+            document.body.classList.remove('theme-classic', 'theme-aurora', 'theme-gold');
+            document.body.classList.add(cardState.theme);
+
+            // 同步編輯表單欄位
+            document.getElementById('input-recipient').value = cardState.recipient;
+            document.getElementById('input-message').value = cardState.message;
+            document.getElementById('input-sender').value = cardState.sender;
+
+            document.querySelectorAll('.theme-option').forEach(btn => {
+                if (btn.dataset.theme === cardState.theme) {
+                    btn.classList.add('border-amber-400', 'ring-2', 'ring-amber-300/50');
+                    btn.classList.remove('border-white/20');
+                } else {
+                    btn.classList.remove('border-amber-400', 'ring-2', 'ring-amber-300/50');
+                    btn.classList.add('border-white/20');
+                }
+            });
+        }
+
+        // 從 URL Hash 讀取分享的客製化資料
+        function loadStateFromURL() {
+            try {
+                const hash = window.location.hash.slice(1);
+                if (!hash) return;
+                const params = new URLSearchParams(hash);
+                if (params.has('to')) cardState.recipient = decodeURIComponent(params.get('to'));
+                if (params.has('msg')) cardState.message = decodeURIComponent(params.get('msg'));
+                if (params.has('from')) cardState.sender = decodeURIComponent(params.get('from'));
+                if (params.has('theme')) {
+                    const t = params.get('theme');
+                    if (['theme-classic', 'theme-aurora', 'theme-gold'].includes(t)) {
+                        cardState.theme = t;
+                    }
+                }
+            } catch (err) {
+                console.warn('無法解析網址參數，使用預設賀卡內容。', err);
+            }
+        }
+
+        // 產生帶有編碼參數的分享連結並複製
+        function generateAndCopyShareLink() {
+            const params = new URLSearchParams();
+            params.set('to', encodeURIComponent(cardState.recipient));
+            params.set('msg', encodeURIComponent(cardState.message));
+            params.set('from', encodeURIComponent(cardState.sender));
+            params.set('theme', cardState.theme);
+
+            const shareUrl = `${window.location.origin}${window.location.pathname}#${params.toString()}`;
+            window.history.replaceState(null, '', `#${params.toString()}`);
+
+            // 使用兼容 iframe 的方式複製文字
+            const tempInput = document.createElement('textarea');
+            tempInput.value = shareUrl;
+            tempInput.style.position = 'fixed';
+            tempInput.style.opacity = '0';
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            try {
+                document.execCommand('copy');
+                showGlobalToast('🔗 已複製專屬聖誕賀卡連結，快傳給朋友吧！');
+            } catch (err) {
+                showGlobalToast('⚠️ 複製失敗，請手動複製網址列連結');
+            }
+            document.body.removeChild(tempInput);
+        }
+
+        let toastTimer = null;
+        function showGlobalToast(text) {
+            const toast = document.getElementById('global-toast');
+            toast.textContent = text;
+            toast.classList.remove('hidden');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3200);
+        }
+
+        /**
+         * ==========================================
+         * 5. 事件綁定與初始化
+         * ==========================================
+         */
+        window.onload = function () {
+            loadStateFromURL();
+            applyCardStateToUI();
+            initSkyAndSnow();
+            animateCanvas();
+
+            const cardWrapper = document.getElementById('card-wrapper');
+            const openCardBtn = document.getElementById('open-card-btn');
+            const closeCardBtn = document.getElementById('close-card-btn');
+            const flapFront = document.querySelector('.flap-front');
+
+            // 打開賀卡
+            function openCard() {
+                if (!cardWrapper.classList.contains('is-open')) {
+                    cardWrapper.classList.add('is-open');
+                    musicBox.playChime();
+                    createSparkleBurst(window.innerWidth / 2, window.innerHeight / 2);
+                }
+            }
+
+            openCardBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openCard();
+            });
+            flapFront.addEventListener('click', openCard);
+
+            // 闔上賀卡
+            closeCardBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                cardWrapper.classList.remove('is-open');
+            });
+
+            // 音樂盒播放/靜音切換
+            const musicToggleBtn = document.getElementById('music-toggle-btn');
+            const musicIcon = document.getElementById('music-icon');
+            const musicLabel = document.getElementById('music-label');
+
+            musicToggleBtn.addEventListener('click', () => {
+                const playing = musicBox.toggle();
+                musicIcon.textContent = playing ? '🎶' : '🎵';
+                musicLabel.textContent = playing ? '音樂盒：播放中' : '音樂盒：關閉';
+                musicToggleBtn.classList.toggle('bg-amber-400/30', playing);
+            });
+
+            // 飄雪量切換
+            const snowToggleBtn = document.getElementById('snow-toggle-btn');
+            const snowLabel = document.getElementById('snow-label');
+            snowToggleBtn.addEventListener('click', () => {
+                currentSnowLevelIdx = (currentSnowLevelIdx + 1) % snowLevels.length;
+                const level = snowLevels[currentSnowLevelIdx];
+                snowLabel.textContent = level.label;
+                adjustSnowCount(level.count);
+            });
+
+            // 禮物盒互動驚喜
+            const giftBoxContainer = document.getElementById('gift-surprise-box');
+            document.querySelectorAll('.gift-box').forEach(gift => {
+                gift.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(gift.dataset.gift, 10) || 0;
+                    giftBoxContainer.innerHTML = `<span class="surprise-toast font-medium text-amber-200">${GIFT_SURPRISES[idx]}</span>`;
+                    musicBox.playChime();
+                    const rect = gift.getBoundingClientRect();
+                    createSparkleBurst(rect.left + rect.width / 2, rect.top);
+                });
+            });
+
+            // 編輯視窗控制
+            const editModal = document.getElementById('edit-modal');
+            const editModalBtn = document.getElementById('edit-modal-btn');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const saveCardBtn = document.getElementById('save-card-btn');
+
+            editModalBtn.addEventListener('click', () => {
+                editModal.classList.remove('hidden');
+                editModal.classList.add('flex');
+            });
+
+            closeModalBtn.addEventListener('click', () => {
+                editModal.classList.add('hidden');
+                editModal.classList.remove('flex');
+            });
+
+            // 主題切換選項
+            let selectedTheme = cardState.theme;
+            document.querySelectorAll('.theme-option').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectedTheme = btn.dataset.theme;
+                    document.querySelectorAll('.theme-option').forEach(b => {
+                        b.classList.remove('border-amber-400', 'ring-2', 'ring-amber-300/50');
+                        b.classList.add('border-white/20');
+                    });
+                    btn.classList.add('border-amber-400', 'ring-2', 'ring-amber-300/50');
+                    btn.classList.remove('border-white/20');
+                });
+            });
+
+            // 一鍵套用祝福語範本
+            document.querySelectorAll('.template-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const key = btn.dataset.template;
+                    if (TEMPLATES[key]) {
+                        document.getElementById('input-message').value = TEMPLATES[key];
+                    }
+                });
+            });
+
+            // 儲存客製化賀卡內容
+            saveCardBtn.addEventListener('click', () => {
+                cardState.recipient = document.getElementById('input-recipient').value.trim() || '摯友';
+                cardState.message = document.getElementById('input-message').value.trim() || TEMPLATES.warm;
+                cardState.sender = document.getElementById('input-sender').value.trim() || '聖誕小精靈';
+                cardState.theme = selectedTheme;
+
+                applyCardStateToUI();
+                editModal.classList.add('hidden');
+                editModal.classList.remove('flex');
+                openCard();
+                showGlobalToast('✨ 已更新你的專屬聖誕賀卡！');
+            });
+
+            // 複製分享連結
+            document.getElementById('share-btn').addEventListener('click', generateAndCopyShareLink);
+        };
+    </script>
+</body>
+</html>
